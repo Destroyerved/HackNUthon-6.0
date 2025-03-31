@@ -1,0 +1,131 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Skin Disease Classifier</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .results {
+            margin-top: 20px;
+            display: none;
+        }
+        .prediction {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress {
+            height: 100%;
+            background-color: #007bff;
+            transition: width 0.3s ease;
+        }
+        #uploadedImage {
+            max-width: 100%;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .upload-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .upload-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Skin Disease Classifier</h1>
+        <p>Upload an image to classify the skin condition.</p>
+        
+        <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+        <button class="upload-btn" onclick="document.getElementById('imageUpload').click()">Upload Image</button>
+        
+        <img id="uploadedImage" style="display: none;">
+        
+        <div id="results" class="results">
+            <h2>Analysis Results</h2>
+            <div id="predictions"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('imageUpload').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // Show loading state
+                document.getElementById('predictions').innerHTML = 'Analyzing image...';
+                document.getElementById('results').style.display = 'block';
+
+                // Display uploaded image
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('uploadedImage');
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+
+                // Make prediction
+                fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('predictions').innerHTML = `Error: ${data.error}`;
+                        return;
+                    }
+
+                    let predictionsHtml = '';
+                    data.predictions.forEach(pred => {
+                        predictionsHtml += `
+                            <div class="prediction">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <strong>${pred.class}</strong>
+                                    <span>${pred.probability.toFixed(2)}%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress" style="width: ${pred.probability}%"></div>
+                                </div>
+                            </div>`;
+                    });
+
+                    document.getElementById('predictions').innerHTML = predictionsHtml;
+                })
+                .catch(error => {
+                    document.getElementById('predictions').innerHTML = `Error: ${error.message}`;
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+        
